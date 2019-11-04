@@ -1,0 +1,380 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.1//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_2.dtd'>
+<nta>
+	<declaration>// This model describes solution #2 of the The Senate Bus Problem described
+// by Allen Downey in his book.
+// The solution presents the following pseudo code:
+
+//initialization:
+// waiting = 0
+// mutex = new Semaphore (1)
+// bus = new Semaphore (0)
+// boarded = new Semaphore (0)
+
+// bus code:
+// mutex . wait ()
+// n = min ( waiting , 50)
+// for i in range (n):
+//	bus . signal ()
+//	boarded . wait ()
+// waiting = max ( waiting -50 , 0)
+// mutex . signal ()
+// depart ()
+
+// riders code:
+// mutex . wait ()
+//	 waiting += 1
+// mutex . signal ()
+// bus . wait ()
+// board ()
+// boarded . signal ()
+
+//Model constructed by:
+// Paolo Scattolin s1023775
+// Johan Urban s1024726
+// from 16/10/19 to 
+
+// Useful global variables:
+
+bool ARRIVED = false; // flag that indicates if the bus is arrived or not
+int boarding = 0; // keeps track of how many people are boarding 
+int travelling_time = 0; // randomize for simulating a delay in the bus travel
+
+// Number of processes in system:
+const int N = 3; 
+
+// Number of semaphores:
+const int M = 3;
+
+// Names of the semaphores, ranging from 0 to M-1:
+const int mutex = 0;
+const int bus = 1;
+const int boarded = 2;
+
+// Number of waiting people
+int waiting = 0;  
+
+chan semWait[M][N], semGo[M][N], semSignal[M][N];</declaration>
+	<template>
+		<name x="5" y="5">Bus</name>
+		<parameter>const int bid</parameter>
+		<declaration>// Place local declarations here.
+
+
+//Functions:
+
+int min (int a,int b) // returns the minimum of 2 int
+{
+  if (a &gt;=b )
+	return b;
+  else 
+	return a;
+}
+
+int max (int a,int b) // returns the maximum of 2 int
+{
+  if (a &lt;=b )
+	return b;
+  else 
+	return a;
+}</declaration>
+		<location id="id0" x="-229" y="-42">
+		</location>
+		<location id="id1" x="-229" y="-170">
+		</location>
+		<location id="id2" x="-34" y="-170">
+		</location>
+		<location id="id3" x="-34" y="-42">
+			<name x="-102" y="-51">depart</name>
+		</location>
+		<location id="id4" x="-229" y="93">
+		</location>
+		<location id="id5" x="-34" y="161">
+		</location>
+		<location id="id6" x="195" y="161">
+		</location>
+		<location id="id7" x="195" y="93">
+		</location>
+		<location id="id8" x="-34" y="93">
+			<name x="-25" y="59">arrived</name>
+		</location>
+		<location id="id9" x="-416" y="-170">
+			<name x="-501" y="-187">travelling</name>
+		</location>
+		<init ref="id0"/>
+		<transition>
+			<source ref="id1"/>
+			<target ref="id9"/>
+			<label kind="assignment" x="-425" y="-238">travelling_time = travelling_time - 1</label>
+			<nail x="-323" y="-221"/>
+		</transition>
+		<transition>
+			<source ref="id9"/>
+			<target ref="id1"/>
+			<label kind="guard" x="-374" y="-127">travelling_time &gt; 0</label>
+			<nail x="-323" y="-127"/>
+		</transition>
+		<transition>
+			<source ref="id8"/>
+			<target ref="id3"/>
+			<label kind="guard" x="-127" y="8">boarding &lt;= 0</label>
+			<label kind="assignment" x="-25" y="8">ARRIVED = false</label>
+		</transition>
+		<transition>
+			<source ref="id8"/>
+			<target ref="id5"/>
+			<label kind="guard" x="-25" y="119">boarding &gt; 0</label>
+		</transition>
+		<transition>
+			<source ref="id9"/>
+			<target ref="id0"/>
+			<label kind="guard" x="-399" y="-68">travelling_time &lt;= 0</label>
+			<nail x="-416" y="-42"/>
+		</transition>
+		<transition>
+			<source ref="id2"/>
+			<target ref="id1"/>
+			<label kind="select" x="-204" y="-212">x : int[1,10]</label>
+			<label kind="synchronisation" x="-212" y="-195">semSignal[mutex][bid]!</label>
+			<label kind="assignment" x="-195" y="-170">travelling_time = x</label>
+		</transition>
+		<transition>
+			<source ref="id3"/>
+			<target ref="id2"/>
+			<label kind="assignment" x="-25" y="-119">waiting = max (waiting - 5, 0)</label>
+		</transition>
+		<transition>
+			<source ref="id7"/>
+			<target ref="id8"/>
+			<label kind="synchronisation" x="34" y="93">semGo[boarded][bid]?</label>
+		</transition>
+		<transition>
+			<source ref="id6"/>
+			<target ref="id7"/>
+			<label kind="synchronisation" x="204" y="119">semWait[boarded][bid]!</label>
+		</transition>
+		<transition>
+			<source ref="id5"/>
+			<target ref="id6"/>
+			<label kind="synchronisation" x="25" y="161">semSignal[bus][bid]!</label>
+		</transition>
+		<transition>
+			<source ref="id4"/>
+			<target ref="id8"/>
+			<label kind="synchronisation" x="-195" y="93">semGo[mutex][bid]?</label>
+			<label kind="assignment" x="-212" y="51">boarding = min (waiting,5),
+ARRIVED = true</label>
+		</transition>
+		<transition>
+			<source ref="id0"/>
+			<target ref="id4"/>
+			<label kind="synchronisation" x="-374" y="0">semWait[mutex][bid]!</label>
+			<label kind="assignment" x="-323" y="17">boarding = 0</label>
+		</transition>
+	</template>
+	<template>
+		<name>Semaphore</name>
+		<parameter>const int id,  const int queue_size, const int init_val</parameter>
+		<declaration>//The value of the semaphore
+int count = init_val;
+//The queue of the semaphore
+//value -1 denotes an empty array entry
+int[-1,N-1] queue[queue_size];
+//An auxiliary variable used to temporarily store process id
+int[0,N-1] q;
+
+void initialize ()
+{
+  for (i : int[0,queue_size-1])
+      {queue[i] = -1;}
+}
+
+void deQueue ()
+{
+  for (i : int[1,queue_size-1])
+    queue[i-1] = queue[i];
+  queue[queue_size-1] = -1;
+}
+
+void enQueue (int p)
+{
+  int i = 0;
+  while (queue[i]&gt;=0){i++;};
+  queue[i]=p;
+}
+
+int[0,N-1] headQueue ( )
+{
+  return queue[0];
+}
+
+bool fullQueue ( )
+{
+  for (i : int[0,queue_size-1])
+   {
+     if (queue[i]==-1) {return false;}
+   }
+  return true;
+}</declaration>
+		<location id="id10" x="384" y="64">
+			<committed/>
+		</location>
+		<location id="id11" x="608" y="320">
+			<committed/>
+		</location>
+		<location id="id12" x="352" y="96">
+			<name x="288" y="64">overflow</name>
+		</location>
+		<location id="id13" x="480" y="192">
+		</location>
+		<init ref="id10"/>
+		<transition>
+			<source ref="id10"/>
+			<target ref="id13"/>
+			<label kind="assignment" x="408" y="72">initialize()</label>
+		</transition>
+		<transition>
+			<source ref="id13"/>
+			<target ref="id13"/>
+			<label kind="select" x="272" y="192">p:int[0,N-1]</label>
+			<label kind="guard" x="272" y="208">count&gt;=0</label>
+			<label kind="synchronisation" x="272" y="224">semSignal[id][p]?</label>
+			<label kind="assignment" x="272" y="240">count++</label>
+			<nail x="352" y="192"/>
+			<nail x="352" y="224"/>
+		</transition>
+		<transition>
+			<source ref="id13"/>
+			<target ref="id11"/>
+			<label kind="select" x="552" y="104">p:int[0,N-1]</label>
+			<label kind="guard" x="552" y="120">count&gt;0</label>
+			<label kind="synchronisation" x="552" y="136">semWait[id][p]?</label>
+			<label kind="assignment" x="552" y="152">count--,
+q=p</label>
+			<nail x="608" y="192"/>
+		</transition>
+		<transition>
+			<source ref="id13"/>
+			<target ref="id12"/>
+			<label kind="select" x="248" y="112">p:int[0,N-1]</label>
+			<label kind="guard" x="248" y="128">count&lt;=0 &amp;&amp; fullQueue()</label>
+			<label kind="synchronisation" x="248" y="144">semWait[id][p]?</label>
+		</transition>
+		<transition>
+			<source ref="id11"/>
+			<target ref="id13"/>
+			<label kind="synchronisation" x="512" y="208">semGo[id][q]!</label>
+		</transition>
+		<transition>
+			<source ref="id13"/>
+			<target ref="id11"/>
+			<label kind="select" x="360" y="280">p:int[0,N-1]</label>
+			<label kind="guard" x="360" y="296">count&lt;0</label>
+			<label kind="synchronisation" x="360" y="312">semSignal[id][p]?</label>
+			<label kind="assignment" x="360" y="328">count++,
+q=headQueue(),
+deQueue()</label>
+			<nail x="480" y="320"/>
+		</transition>
+		<transition>
+			<source ref="id13"/>
+			<target ref="id13"/>
+			<label kind="select" x="480" y="-24">p:int[0,N-1]</label>
+			<label kind="guard" x="480" y="-8">count&lt;=0 &amp;&amp; not fullQueue()</label>
+			<label kind="synchronisation" x="480" y="8">semWait[id][p]?</label>
+			<label kind="assignment" x="480" y="24">count--,
+enQueue(p)</label>
+			<nail x="480" y="64"/>
+			<nail x="512" y="64"/>
+		</transition>
+	</template>
+	<template>
+		<name>Riders</name>
+		<parameter>const int rid</parameter>
+		<location id="id14" x="-187" y="-127">
+		</location>
+		<location id="id15" x="51" y="-212">
+		</location>
+		<location id="id16" x="51" y="-136">
+			<name x="68" y="-161">busIsHere</name>
+		</location>
+		<location id="id17" x="51" y="0">
+			<name x="68" y="8">wait</name>
+		</location>
+		<location id="id18" x="-187" y="0">
+		</location>
+		<location id="id19" x="-187" y="-212">
+			<name x="-197" y="-246">board</name>
+		</location>
+		<location id="id20" x="51" y="-68">
+		</location>
+		<init ref="id14"/>
+		<transition>
+			<source ref="id20"/>
+			<target ref="id14"/>
+			<label kind="guard" x="-127" y="-68">ARRIVED == false</label>
+			<nail x="-85" y="-68"/>
+		</transition>
+		<transition>
+			<source ref="id20"/>
+			<target ref="id16"/>
+			<label kind="guard" x="59" y="-102">ARRIVED == true</label>
+		</transition>
+		<transition>
+			<source ref="id14"/>
+			<target ref="id20"/>
+			<label kind="guard" x="-102" y="-153">boarding &gt; 0</label>
+			<nail x="-42" y="-127"/>
+		</transition>
+		<transition>
+			<source ref="id15"/>
+			<target ref="id19"/>
+			<label kind="synchronisation" x="-119" y="-238">semGo[bus][rid]?</label>
+		</transition>
+		<transition>
+			<source ref="id16"/>
+			<target ref="id15"/>
+			<label kind="synchronisation" x="59" y="-187">semWait[bus][rid]!</label>
+		</transition>
+		<transition>
+			<source ref="id17"/>
+			<target ref="id20"/>
+			<label kind="synchronisation" x="59" y="-34">semSignal[mutex][rid]!</label>
+		</transition>
+		<transition>
+			<source ref="id18"/>
+			<target ref="id17"/>
+			<label kind="synchronisation" x="-136" y="8">semGo[mutex][rid]?</label>
+			<label kind="assignment" x="-136" y="25">waiting = waiting + 1</label>
+		</transition>
+		<transition>
+			<source ref="id14"/>
+			<target ref="id18"/>
+			<label kind="guard" x="-289" y="-76">boarding &lt;= 0</label>
+			<label kind="synchronisation" x="-331" y="-59">semWait[mutex][rid]!</label>
+		</transition>
+		<transition>
+			<source ref="id19"/>
+			<target ref="id14"/>
+			<label kind="synchronisation" x="-357" y="-187">semSignal[boarded][rid]!</label>
+			<label kind="assignment" x="-348" y="-170">boarding = boarding - 1</label>
+		</transition>
+	</template>
+	<system>// Place template instantiations here.
+
+mutexSem = Semaphore(mutex,N-1,1);
+boardedSem = Semaphore(boarded,N-1,0);
+busSem = Semaphore(bus,N-1,0);
+
+riders_t = Riders(0);
+bus_t = Bus(1);
+
+// List one or more processes to be composed into a system.
+system  riders_t,bus_t,mutexSem,busSem,boardedSem;</system>
+	<queries>
+		<query>
+			<formula>A[] not deadlock</formula>
+			<comment></comment>
+		</query>
+	</queries>
+</nta>
