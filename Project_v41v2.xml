@@ -32,13 +32,12 @@
 //Model constructed by:
 // Paolo Scattolin s1023775
 // Johan Urban s1024726
-// from 16/10/19 to 
+// from 16/10/19 to 05/11/19
 
 // Useful global variables:
-
-bool ARRIVED = false; // flag that indicates if the bus is arrived or not
-int boarding = 0; // keeps track of how many people are boarding 
-int travelling_time = 0; // randomize for simulating a delay in the bus travel
+bool ARRIVED = false;      // flag that indicates if the bus is arrived or not, to avoid people trying to board after they are arrived.
+int boarding = 0;          // keeps track of how many people are boarding. 
+int travelling_time = 0;   // randomize for simulating a delay in the bus travel, to create time for new people to come to the station.
 
 // Number of processes in system:
 const int N = 3; 
@@ -51,9 +50,10 @@ const int mutex = 0;
 const int bus = 1;
 const int boarded = 2;
 
-// Number of waiting people
+// Number of waiting people:
 int waiting = 0;  
 
+// Channels:
 chan semWait[M][N], semGo[M][N], semSignal[M][N];</declaration>
 	<template>
 		<name x="5" y="5">Bus</name>
@@ -79,13 +79,14 @@ int max (int a,int b) // returns the maximum of 2 int
 	return a;
 }</declaration>
 		<location id="id0" x="-229" y="-42">
+			<name x="-212" y="-51">ready</name>
 		</location>
 		<location id="id1" x="-229" y="-170">
 		</location>
 		<location id="id2" x="-34" y="-170">
 		</location>
 		<location id="id3" x="-34" y="-42">
-			<name x="-102" y="-51">depart</name>
+			<name x="-110" y="-51">departed</name>
 		</location>
 		<location id="id4" x="-229" y="93">
 		</location>
@@ -99,14 +100,14 @@ int max (int a,int b) // returns the maximum of 2 int
 			<name x="-25" y="59">arrived</name>
 		</location>
 		<location id="id9" x="-416" y="-170">
-			<name x="-501" y="-187">travelling</name>
+			<name x="-493" y="-178">travelling</name>
 		</location>
 		<init ref="id0"/>
 		<transition>
 			<source ref="id1"/>
 			<target ref="id9"/>
 			<label kind="assignment" x="-425" y="-238">travelling_time = travelling_time - 1</label>
-			<nail x="-323" y="-221"/>
+			<nail x="-323" y="-212"/>
 		</transition>
 		<transition>
 			<source ref="id9"/>
@@ -134,9 +135,9 @@ int max (int a,int b) // returns the maximum of 2 int
 		<transition>
 			<source ref="id2"/>
 			<target ref="id1"/>
-			<label kind="select" x="-204" y="-212">x : int[1,10]</label>
-			<label kind="synchronisation" x="-212" y="-195">semSignal[mutex][bid]!</label>
-			<label kind="assignment" x="-195" y="-170">travelling_time = x</label>
+			<label kind="select" x="-170" y="-212">x : int[1,10]</label>
+			<label kind="synchronisation" x="-195" y="-195">semSignal[mutex][bid]!</label>
+			<label kind="assignment" x="-178" y="-170">travelling_time = x</label>
 		</transition>
 		<transition>
 			<source ref="id3"/>
@@ -292,23 +293,33 @@ enQueue(p)</label>
 		<name>Riders</name>
 		<parameter>const int rid</parameter>
 		<location id="id14" x="-187" y="-127">
+			<name x="-238" y="-136">ready</name>
 		</location>
 		<location id="id15" x="51" y="-212">
 		</location>
 		<location id="id16" x="51" y="-136">
-			<name x="68" y="-161">busIsHere</name>
+			<name x="59" y="-170">busIsHere</name>
 		</location>
 		<location id="id17" x="51" y="0">
-			<name x="68" y="8">wait</name>
+			<name x="68" y="-8">wait</name>
 		</location>
 		<location id="id18" x="-187" y="0">
+			<name x="-280" y="-8">goToStation</name>
 		</location>
 		<location id="id19" x="-187" y="-212">
-			<name x="-197" y="-246">board</name>
+			<name x="-212" y="-246">board</name>
 		</location>
 		<location id="id20" x="51" y="-68">
 		</location>
 		<init ref="id14"/>
+		<transition>
+			<source ref="id18"/>
+			<target ref="id17"/>
+			<label kind="guard" x="-119" y="93">waiting &gt;= 100</label>
+			<label kind="synchronisation" x="-127" y="76">semGo[mutex][rid]?</label>
+			<nail x="-187" y="76"/>
+			<nail x="51" y="76"/>
+		</transition>
 		<transition>
 			<source ref="id20"/>
 			<target ref="id14"/>
@@ -318,7 +329,7 @@ enQueue(p)</label>
 		<transition>
 			<source ref="id20"/>
 			<target ref="id16"/>
-			<label kind="guard" x="59" y="-102">ARRIVED == true</label>
+			<label kind="guard" x="59" y="-110">ARRIVED == true</label>
 		</transition>
 		<transition>
 			<source ref="id14"/>
@@ -344,8 +355,9 @@ enQueue(p)</label>
 		<transition>
 			<source ref="id18"/>
 			<target ref="id17"/>
-			<label kind="synchronisation" x="-136" y="8">semGo[mutex][rid]?</label>
-			<label kind="assignment" x="-136" y="25">waiting = waiting + 1</label>
+			<label kind="guard" x="-119" y="-25">waiting &lt; 100</label>
+			<label kind="synchronisation" x="-136" y="0">semGo[mutex][rid]?</label>
+			<label kind="assignment" x="-136" y="17">waiting = waiting + 1</label>
 		</transition>
 		<transition>
 			<source ref="id14"/>
